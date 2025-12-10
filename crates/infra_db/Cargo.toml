@@ -1,0 +1,22 @@
+[package]
+name = "infra_db"
+description = "Database infrastructure layer with SQLx, bi-temporal patterns, and repository implementations"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+core_kernel = { workspace = true }
+sqlx = { workspace = true }
+tokio = { workspace = true }
+chrono = { workspace = true }
+uuid = { workspace = true }
+rust_decimal = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+async-trait = "0.1"
+
+[dev-dependencies]
+proptest = { workspace = true }

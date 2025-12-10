@@ -1,0 +1,84 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/core_kernel",
+    "crates/infra_db",
+    "crates/domain_policy",
+    "crates/domain_billing",
+    "crates/domain_fund",
+    "crates/domain_claims",
+    "crates/domain_party",
+    "crates/interface_api",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+repository = "https://github.com/Open-insurance-core/Open-insurance-core"
+
+[workspace.dependencies]
+# Async runtime
+tokio = { version = "1.41", features = ["full"] }
+
+# Web framework
+axum = { version = "0.7", features = ["macros"] }
+tower = { version = "0.5", features = ["full"] }
+tower-http = { version = "0.6", features = ["trace", "cors", "request-id"] }
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Database
+sqlx = { version = "0.8", features = ["runtime-tokio", "postgres", "uuid", "chrono", "rust_decimal", "migrate"] }
+
+# Financial precision
+rust_decimal = { version = "1.36", features = ["serde", "db-postgres"] }
+rust_decimal_macros = "1.36"
+
+# Date/Time
+chrono = { version = "0.4", features = ["serde"] }
+chrono-tz = "0.10"
+
+# UUID
+uuid = { version = "1.11", features = ["v4", "v7", "serde"] }
+
+# Error handling
+thiserror = "2.0"
+anyhow = "1.0"
+
+# Logging and tracing
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+
+# Rules engine
+zen-engine = "0.25"
+
+# Internationalization
+fluent = "0.16"
+fluent-langneg = "0.14"
+unic-langid = "0.9"
+
+# Testing
+proptest = "1.5"
+
+# Authentication
+jsonwebtoken = "9.3"
+
+# Validation
+validator = { version = "0.18", features = ["derive"] }
+
+# Configuration
+config = "0.14"
+dotenvy = "0.15"
+
+# Internal crates
+core_kernel = { path = "crates/core_kernel" }
+infra_db = { path = "crates/infra_db" }
+domain_policy = { path = "crates/domain_policy" }
+domain_billing = { path = "crates/domain_billing" }
+domain_fund = { path = "crates/domain_fund" }
+domain_claims = { path = "crates/domain_claims" }
+domain_party = { path = "crates/domain_party" }
+interface_api = { path = "crates/interface_api" }
