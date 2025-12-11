@@ -1,0 +1,161 @@
+# Open Insurance Core - Docker Compose Configuration
+#
+# This configuration provides a complete test harness for the insurance system.
+#
+# Usage:
+#   Run all tests:     docker-compose up --build test
+#   Run unit tests:    docker-compose run --rm test unit
+#   Run integration:   docker-compose run --rm test integration
+#   Start dev DB:      docker-compose up -d postgres
+#   View logs:         docker-compose logs -f
+#   Cleanup:           docker-compose down -v
+
+version: '3.9'
+
+services:
+  # ===========================================
+  # PostgreSQL Database Service
+  # ===========================================
+  postgres:
+    image: postgres:16-alpine
+    container_name: insurance-postgres
+    environment:
+      POSTGRES_USER: insurance_user
+      POSTGRES_PASSWORD: insurance_pass
+      POSTGRES_DB: insurance_test
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./migrations:/docker-entrypoint-initdb.d:ro
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U insurance_user -d insurance_test"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - insurance-network
+
+  # ===========================================
+  # Test Runner Service
+  # ===========================================
+  test:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: test-runtime
+    container_name: insurance-test
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://insurance_user:insurance_pass@postgres:5432/insurance_test
+      RUST_BACKTRACE: 1
+      RUST_LOG: info
+      TEST_DATABASE_HOST: postgres
+      TEST_DATABASE_PORT: 5432
+      TEST_DATABASE_USER: insurance_user
+      TEST_DATABASE_PASSWORD: insurance_pass
+      TEST_DATABASE_NAME: insurance_test
+    volumes:
+      - test_results:/app/test-results
+      - cargo_cache:/usr/local/cargo/registry
+    networks:
+      - insurance-network
+    command: ["all"]
+
+  # ===========================================
+  # Unit Test Service (no database required)
+  # ===========================================
+  unit-tests:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: test-runtime
+    container_name: insurance-unit-tests
+    environment:
+      RUST_BACKTRACE: 1
+      RUST_LOG: info
+    volumes:
+      - test_results:/app/test-results
+    networks:
+      - insurance-network
+    command: ["unit"]
+
+  # ===========================================
+  # Integration Test Service
+  # ===========================================
+  integration-tests:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: test-runtime
+    container_name: insurance-integration-tests
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://insurance_user:insurance_pass@postgres:5432/insurance_test
+      RUST_BACKTRACE: 1
+      RUST_LOG: debug
+      TEST_DATABASE_HOST: postgres
+      TEST_DATABASE_PORT: 5432
+      TEST_DATABASE_USER: insurance_user
+      TEST_DATABASE_PASSWORD: insurance_pass
+      TEST_DATABASE_NAME: insurance_test
+    volumes:
+      - test_results:/app/test-results
+    networks:
+      - insurance-network
+    command: ["integration"]
+
+  # ===========================================
+  # Coverage Report Service
+  # ===========================================
+  coverage:
+    build:
+      context: .
+      dockerfile: Dockerfile.coverage
+    container_name: insurance-coverage
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://insurance_user:insurance_pass@postgres:5432/insurance_test
+      RUST_BACKTRACE: 1
+      LLVM_PROFILE_FILE: /app/coverage/cargo-test-%p-%m.profraw
+    volumes:
+      - coverage_data:/app/coverage
+    networks:
+      - insurance-network
+
+  # ===========================================
+  # All-in-One Test Harness (Single Container)
+  # ===========================================
+  test-harness:
+    build:
+      context: .
+      dockerfile: Dockerfile.all-in-one
+    container_name: insurance-test-harness
+    environment:
+      RUST_BACKTRACE: 1
+      RUST_LOG: info
+    ports:
+      - "5433:5432"
+      - "8080:8080"
+    volumes:
+      - test_results:/app/test-results
+    networks:
+      - insurance-network
+    command: ["all"]
+
+networks:
+  insurance-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  test_results:
+  cargo_cache:
+  coverage_data:

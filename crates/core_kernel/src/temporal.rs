@@ -6,13 +6,36 @@
 
 use chrono::{DateTime, NaiveDate, Utc};
 use chrono_tz::Tz;
-use serde::{Deserialize, Serialize};
-use std::ops::Range;
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use thiserror::Error;
+use std::str::FromStr;
 
 /// Timezone wrapper for policy jurisdictions
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+///
+/// Wraps chrono_tz::Tz with custom serialization support.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Timezone(pub Tz);
+
+impl Serialize for Timezone {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_str(self.0.name())
+    }
+}
+
+impl<'de> Deserialize<'de> for Timezone {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+        Tz::from_str(&s)
+            .map(Timezone)
+            .map_err(|_| serde::de::Error::custom(format!("Invalid timezone: {}", s)))
+    }
+}
 
 impl Timezone {
     pub fn new(tz: Tz) -> Self {

@@ -576,6 +576,8 @@ impl Policy {
             EndorsementType::AddressChange { .. } => {
                 // Handle through party service
             }
+            // Other endorsement types are handled by their respective domain services
+            _ => {}
         }
 
         let now = Utc::now();

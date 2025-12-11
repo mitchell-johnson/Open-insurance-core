@@ -129,9 +129,9 @@ impl Invoice {
         self.amount_paid = self.amount_paid + amount;
         self.updated_at = Utc::now();
 
-        if self.amount_paid >= self.total {
+        if self.amount_paid.amount() >= self.total.amount() {
             self.status = InvoiceStatus::Paid;
-        } else if self.amount_paid > Money::zero(self.currency) {
+        } else if self.amount_paid.amount() > rust_decimal::Decimal::ZERO {
             self.status = InvoiceStatus::PartiallyPaid;
         }
     }

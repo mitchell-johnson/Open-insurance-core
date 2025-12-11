@@ -153,16 +153,16 @@ impl Ledger {
 
         // Update account balances
         for posting in &transaction.postings {
-            let balance = self.balances.get_mut(&posting.account_id).unwrap();
-            let account = self.accounts.get(&posting.account_id).unwrap();
+            let account_type = self.accounts.get(&posting.account_id).unwrap().account_type;
 
             // Calculate balance change based on account type and posting type
-            let change = self.calculate_balance_change(
-                account.account_type,
+            let change = Self::calculate_balance_change(
+                account_type,
                 &posting.posting_type,
                 posting.amount,
             );
 
+            let balance = self.balances.get_mut(&posting.account_id).unwrap();
             *balance = balance.checked_add(&change)
                 .map_err(|e| BillingError::CalculationError(e.to_string()))?;
         }
@@ -253,7 +253,6 @@ impl Ledger {
     /// - Asset & Expense accounts: Debits increase, Credits decrease
     /// - Liability, Equity & Revenue accounts: Credits increase, Debits decrease
     fn calculate_balance_change(
-        &self,
         account_type: AccountType,
         posting_type: &PostingType,
         amount: Money,

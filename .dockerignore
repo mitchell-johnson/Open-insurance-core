@@ -1,0 +1,53 @@
+# Open Insurance Core - Docker Ignore File
+
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Rust build artifacts
+target/
+**/*.rs.bk
+
+# IDE and editor files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Documentation (not needed for tests)
+*.md
+!README.md
+docs/
+
+# Test results and coverage
+test-results/
+coverage/
+*.profraw
+*.profdata
+lcov.info
+tarpaulin-report.html
+
+# Local configuration
+.env
+.env.local
+.env.*.local
+*.local.toml
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Backup files
+*.bak
+*.backup

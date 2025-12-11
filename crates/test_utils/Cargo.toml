@@ -1,0 +1,34 @@
+[package]
+name = "test_utils"
+description = "Shared test utilities, fixtures, and helpers for the insurance system test suite"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+# Internal crates
+core_kernel = { workspace = true }
+domain_policy = { workspace = true }
+domain_billing = { workspace = true }
+domain_fund = { workspace = true }
+domain_claims = { workspace = true }
+domain_party = { workspace = true }
+infra_db = { workspace = true }
+
+# Core dependencies
+rust_decimal = { workspace = true }
+rust_decimal_macros = { workspace = true }
+chrono = { workspace = true }
+uuid = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+tokio = { workspace = true }
+sqlx = { workspace = true }
+
+# Testing utilities
+proptest = { workspace = true }
+fake = { version = "3.0", features = ["derive", "chrono", "rust_decimal"] }
+once_cell = "1.19"
+testcontainers = "0.23"
+testcontainers-modules = { version = "0.11", features = ["postgres"] }
