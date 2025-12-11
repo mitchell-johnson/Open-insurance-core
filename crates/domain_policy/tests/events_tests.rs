@@ -37,6 +37,7 @@ fn test_policy_issued_event() {
 
     assert_eq!(event.policy_id(), policy_id);
     assert_eq!(event.event_type(), "PolicyIssued");
+    assert_eq!(event.timestamp(), now);
 }
 
 #[test]
@@ -50,7 +51,9 @@ fn test_policy_lapsed_event() {
         timestamp: now,
     };
 
+    assert_eq!(event.policy_id(), policy_id);
     assert_eq!(event.event_type(), "PolicyLapsed");
+    assert_eq!(event.timestamp(), now);
 }
 
 #[test]
@@ -63,7 +66,9 @@ fn test_policy_reinstated_event() {
         timestamp: now,
     };
 
+    assert_eq!(event.policy_id(), policy_id);
     assert_eq!(event.event_type(), "PolicyReinstated");
+    assert_eq!(event.timestamp(), now);
 }
 
 #[test]
@@ -77,7 +82,9 @@ fn test_policy_terminated_event() {
         timestamp: now,
     };
 
+    assert_eq!(event.policy_id(), policy_id);
     assert_eq!(event.event_type(), "PolicyTerminated");
+    assert_eq!(event.timestamp(), now);
 }
 
 #[test]
@@ -92,7 +99,9 @@ fn test_policy_cancelled_event() {
         timestamp: now,
     };
 
+    assert_eq!(event.policy_id(), policy_id);
     assert_eq!(event.event_type(), "PolicyCancelled");
+    assert_eq!(event.timestamp(), now);
 }
 
 #[test]
@@ -106,7 +115,9 @@ fn test_policy_expired_event() {
         timestamp: now,
     };
 
+    assert_eq!(event.policy_id(), policy_id);
     assert_eq!(event.event_type(), "PolicyExpired");
+    assert_eq!(event.timestamp(), now);
 }
 
 #[test]
@@ -121,7 +132,9 @@ fn test_policy_renewed_event() {
         timestamp: now,
     };
 
+    assert_eq!(event.policy_id(), policy_id);
     assert_eq!(event.event_type(), "PolicyRenewed");
+    assert_eq!(event.timestamp(), now);
 }
 
 #[test]
@@ -138,7 +151,9 @@ fn test_endorsement_applied_event() {
         timestamp: now,
     };
 
+    assert_eq!(event.policy_id(), policy_id);
     assert_eq!(event.event_type(), "EndorsementApplied");
+    assert_eq!(event.timestamp(), now);
 }
 
 #[test]
@@ -153,7 +168,9 @@ fn test_payment_received_event() {
         timestamp: now,
     };
 
+    assert_eq!(event.policy_id(), policy_id);
     assert_eq!(event.event_type(), "PaymentReceived");
+    assert_eq!(event.timestamp(), now);
 }
 
 #[test]
@@ -169,7 +186,9 @@ fn test_premium_due_event() {
         timestamp: now,
     };
 
+    assert_eq!(event.policy_id(), policy_id);
     assert_eq!(event.event_type(), "PremiumDue");
+    assert_eq!(event.timestamp(), now);
 }
 
 #[test]
@@ -185,7 +204,9 @@ fn test_premium_overdue_event() {
         timestamp: now,
     };
 
+    assert_eq!(event.policy_id(), policy_id);
     assert_eq!(event.event_type(), "PremiumOverdue");
+    assert_eq!(event.timestamp(), now);
 }
 
 #[test]
@@ -199,7 +220,9 @@ fn test_grace_period_started_event() {
         timestamp: now,
     };
 
+    assert_eq!(event.policy_id(), policy_id);
     assert_eq!(event.event_type(), "GracePeriodStarted");
+    assert_eq!(event.timestamp(), now);
 }
 
 #[test]
@@ -212,7 +235,9 @@ fn test_submitted_for_underwriting_event() {
         timestamp: now,
     };
 
+    assert_eq!(event.policy_id(), policy_id);
     assert_eq!(event.event_type(), "SubmittedForUnderwriting");
+    assert_eq!(event.timestamp(), now);
 }
 
 #[test]
@@ -228,7 +253,9 @@ fn test_underwriting_decision_event() {
         timestamp: now,
     };
 
+    assert_eq!(event.policy_id(), policy_id);
     assert_eq!(event.event_type(), "UnderwritingDecision");
+    assert_eq!(event.timestamp(), now);
 }
 
 #[test]
@@ -243,7 +270,9 @@ fn test_beneficiary_changed_event() {
         timestamp: now,
     };
 
+    assert_eq!(event.policy_id(), policy_id);
     assert_eq!(event.event_type(), "BeneficiaryChanged");
+    assert_eq!(event.timestamp(), now);
 }
 
 #[test]
@@ -258,7 +287,9 @@ fn test_policy_loan_taken_event() {
         timestamp: now,
     };
 
+    assert_eq!(event.policy_id(), policy_id);
     assert_eq!(event.event_type(), "PolicyLoanTaken");
+    assert_eq!(event.timestamp(), now);
 }
 
 #[test]
@@ -273,7 +304,9 @@ fn test_policy_loan_repaid_event() {
         timestamp: now,
     };
 
+    assert_eq!(event.policy_id(), policy_id);
     assert_eq!(event.event_type(), "PolicyLoanRepaid");
+    assert_eq!(event.timestamp(), now);
 }
 
 #[test]
