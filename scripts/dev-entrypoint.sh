@@ -86,23 +86,15 @@ setup_database() {
     print_info "Setting up database..."
 
     # Create user if not exists
-    sudo -u postgres psql -c \
-        "DO \$\$
-        BEGIN
-            IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = '${POSTGRES_USER}') THEN
-                CREATE USER ${POSTGRES_USER} WITH PASSWORD '${POSTGRES_PASSWORD}';
-            END IF;
-        END
-        \$\$;" 2>/dev/null || true
+    sudo -u postgres psql -tc "SELECT 1 FROM pg_roles WHERE rolname = '${POSTGRES_USER}'" | grep -q 1 || \
+        sudo -u postgres psql -c "CREATE USER ${POSTGRES_USER} WITH PASSWORD '${POSTGRES_PASSWORD}';"
 
     # Create database if not exists
-    sudo -u postgres psql -c \
-        "SELECT 'CREATE DATABASE ${POSTGRES_DB} OWNER ${POSTGRES_USER}'
-         WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = '${POSTGRES_DB}')\gexec" 2>/dev/null || true
+    sudo -u postgres psql -tc "SELECT 1 FROM pg_database WHERE datname = '${POSTGRES_DB}'" | grep -q 1 || \
+        sudo -u postgres psql -c "CREATE DATABASE ${POSTGRES_DB} OWNER ${POSTGRES_USER};"
 
     # Grant privileges
-    sudo -u postgres psql -c \
-        "GRANT ALL PRIVILEGES ON DATABASE ${POSTGRES_DB} TO ${POSTGRES_USER};" 2>/dev/null || true
+    sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE ${POSTGRES_DB} TO ${POSTGRES_USER};" 2>/dev/null || true
 
     # Set DATABASE_URL
     export DATABASE_URL="postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@localhost:5432/${POSTGRES_DB}"
@@ -226,6 +218,29 @@ main() {
             exec psql -h localhost -U "${POSTGRES_USER}" -d "${POSTGRES_DB}"
             ;;
 
+        editor)
+            # Start JDM Editor
+            print_info "Starting JDM Editor on port 5173..."
+            print_info "Access at: http://localhost:5173"
+            cd /opt/jdm-editor
+            exec npm run dev
+            ;;
+
+        all)
+            # Start everything: API server and JDM Editor
+            print_info "Starting API server and JDM Editor..."
+            print_environment
+            print_info "JDM Editor: http://localhost:5173"
+
+            # Start JDM Editor in background
+            cd /opt/jdm-editor
+            npm run dev &
+
+            # Start API server in foreground
+            cd /app
+            exec /usr/local/bin/insurance-api
+            ;;
+
         shell|bash)
             # Interactive shell
             print_info "Starting interactive shell..."
@@ -239,6 +254,8 @@ main() {
             echo "Commands:"
             echo "  serve       Start the API server (production binary)"
             echo "  dev         Start with hot reload (cargo-watch)"
+            echo "  editor      Start JDM Editor on port 5173"
+            echo "  all         Start API server + JDM Editor"
             echo "  build       Build the project"
             echo "  test        Run all tests"
             echo "  unit        Run unit tests only"
@@ -249,6 +266,8 @@ main() {
             echo ""
             echo "Examples:"
             echo "  docker run -p 8080:8080 insurance-dev serve"
+            echo "  docker run -p 8080:8080 -p 5173:5173 insurance-dev all"
+            echo "  docker run -p 5173:5173 insurance-dev editor"
             echo "  docker run -p 8080:8080 -v \$(pwd):/app insurance-dev dev"
             echo "  docker run insurance-dev test"
             echo ""

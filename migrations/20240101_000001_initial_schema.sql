@@ -68,13 +68,16 @@ CREATE INDEX idx_party_versions_party_id ON party_versions(party_id);
 CREATE INDEX idx_party_versions_email ON party_versions(lower(email));
 CREATE INDEX idx_party_versions_current ON party_versions(party_id) WHERE upper(sys_period) IS NULL;
 
+-- Create unique index on party_id for current records (for FK references)
+CREATE UNIQUE INDEX idx_party_versions_party_id_unique ON party_versions(party_id) WHERE upper(sys_period) IS NULL;
+
 -- Policy table (bi-temporal)
 CREATE TABLE policy_versions (
     version_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     policy_id UUID NOT NULL,
     policy_number VARCHAR(50) NOT NULL,
     product_code VARCHAR(50) NOT NULL,
-    policyholder_id UUID NOT NULL REFERENCES party_versions(party_id),
+    policyholder_id UUID NOT NULL,  -- References party_versions.party_id (via application logic)
     status policy_status NOT NULL DEFAULT 'quoted',
     effective_date TIMESTAMPTZ NOT NULL,
     expiry_date TIMESTAMPTZ NOT NULL,

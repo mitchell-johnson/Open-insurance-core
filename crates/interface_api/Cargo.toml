@@ -35,6 +35,9 @@ sqlx = { workspace = true }
 # Date/Time
 chrono = { workspace = true }
 
+# Financial precision
+rust_decimal = { workspace = true }
+
 # UUID
 uuid = { workspace = true }
 

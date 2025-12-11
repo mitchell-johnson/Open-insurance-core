@@ -4,10 +4,13 @@
 # - PostgreSQL 16 database
 # - Rust toolchain with cargo-watch for hot reload
 # - The API server with all dependencies
+# - JDM Editor (JSON Decision Model editor from GoRules)
 #
 # Usage:
 #   Build:      docker build -f Dockerfile.dev -t insurance-dev .
 #   Run server: docker run -p 8080:8080 -p 5432:5432 insurance-dev serve
+#   Run all:    docker run -p 8080:8080 -p 5432:5432 -p 5173:5173 insurance-dev all
+#   Run editor: docker run -p 5173:5173 insurance-dev editor
 #   Run dev:    docker run -p 8080:8080 -p 5432:5432 -v $(pwd):/app insurance-dev dev
 #   Run shell:  docker run -it -p 8080:8080 -p 5432:5432 insurance-dev shell
 #   Run tests:  docker run insurance-dev test
@@ -24,14 +27,21 @@
 # ============================================
 # Stage 1: Build Stage
 # ============================================
-FROM rust:1.83-bookworm AS builder
+FROM rust:1.85-bookworm AS builder
 
-# Install build dependencies
+# Install build dependencies and PostgreSQL for compile-time query verification
 RUN apt-get update && apt-get install -y \
     pkg-config \
     libssl-dev \
     libpq-dev \
+    postgresql \
+    postgresql-contrib \
     && rm -rf /var/lib/apt/lists/*
+
+# Initialize PostgreSQL for build-time query verification
+RUN service postgresql start && \
+    su - postgres -c "psql -c \"CREATE USER insurance_user WITH PASSWORD 'insurance_pass' SUPERUSER;\"" && \
+    su - postgres -c "psql -c \"CREATE DATABASE insurance_dev OWNER insurance_user;\""
 
 WORKDIR /app
 
@@ -67,43 +77,212 @@ RUN for dir in crates/*/src; do \
     mkdir -p crates/interface_api/src/bin && \
     echo "fn main() {}" > crates/interface_api/src/bin/server.rs
 
+# Pin home crate to version compatible with Rust 1.85
+RUN cargo update home@0.5.12 --precise 0.5.9 2>/dev/null || true
+
 # Build dependencies (this layer will be cached)
 RUN cargo build --release 2>/dev/null || true
 
-# Remove stubs
-RUN find crates -name "*.rs" -delete
+# Remove stubs and all compiled workspace crates to force complete rebuild
+RUN find crates -name "*.rs" -delete && \
+    rm -rf target/release/deps/core_kernel* \
+           target/release/deps/infra_db* \
+           target/release/deps/domain_* \
+           target/release/deps/interface_api* \
+           target/release/deps/libcore_kernel* \
+           target/release/deps/libinfra_db* \
+           target/release/deps/libdomain_* \
+           target/release/deps/libinterface_api* \
+           target/release/insurance-api \
+           target/release/.fingerprint/core_kernel* \
+           target/release/.fingerprint/infra_db* \
+           target/release/.fingerprint/domain_* \
+           target/release/.fingerprint/interface_api*
 
 # Copy actual source code
 COPY crates/ crates/
 COPY migrations/ migrations/
 
-# Build the release binary
-RUN cargo build --release --bin insurance-api
+# Pin home crate to version compatible with Rust 1.85
+RUN cargo update home --precise 0.5.9
+
+# Start PostgreSQL, apply schema, and build the release binary
+RUN service postgresql start && \
+    sleep 2 && \
+    echo "=== Running migration ===" && \
+    PGPASSWORD=insurance_pass psql -h localhost -U insurance_user -d insurance_dev -f /app/migrations/20240101_000001_initial_schema.sql -v ON_ERROR_STOP=1 && \
+    echo "=== Checking tables ===" && \
+    PGPASSWORD=insurance_pass psql -h localhost -U insurance_user -d insurance_dev -c "\\dt" && \
+    echo "=== Building ===" && \
+    DATABASE_URL=postgres://insurance_user:insurance_pass@localhost:5432/insurance_dev \
+    cargo build --release --bin insurance-api
 
 # ============================================
 # Stage 2: Development Runtime
 # ============================================
-FROM rust:1.83-bookworm AS dev-runtime
+FROM rust:1.85-bookworm AS dev-runtime
 
-# Install runtime dependencies, PostgreSQL, and development tools
+# Install runtime dependencies and development tools
 RUN apt-get update && apt-get install -y \
     ca-certificates \
     libssl3 \
     libpq5 \
     libpq-dev \
     pkg-config \
-    postgresql-16 \
-    postgresql-contrib-16 \
-    postgresql-client-16 \
     sudo \
     curl \
     procps \
     bc \
     git \
+    gnupg \
+    lsb-release \
+    && rm -rf /var/lib/apt/lists/*
+
+# Add PostgreSQL apt repository for version 16
+RUN curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | gpg --dearmor -o /usr/share/keyrings/postgresql-keyring.gpg && \
+    echo "deb [signed-by=/usr/share/keyrings/postgresql-keyring.gpg] http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list && \
+    apt-get update && apt-get install -y \
+    postgresql-16 \
+    postgresql-contrib-16 \
+    postgresql-client-16 \
     && rm -rf /var/lib/apt/lists/*
 
 # Install cargo-watch for hot reload development
-RUN cargo install cargo-watch
+RUN cargo install cargo-watch --locked
+
+# Install Node.js 20 and pnpm for jdm-editor
+RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
+    apt-get install -y nodejs && \
+    npm install -g pnpm && \
+    rm -rf /var/lib/apt/lists/*
+
+# Create standalone JDM Editor app using npm package
+RUN mkdir -p /opt/jdm-editor && \
+    cd /opt/jdm-editor && \
+    npm init -y && \
+    npm install vite @vitejs/plugin-react react react-dom @gorules/jdm-editor express cors
+
+# Create vite config
+RUN echo 'import { defineConfig } from "vite"; \n\
+import react from "@vitejs/plugin-react"; \n\
+export default defineConfig({ \n\
+  plugins: [react()], \n\
+  server: { host: "0.0.0.0", port: 5173, proxy: { "/api": "http://localhost:3001" } } \n\
+});' > /opt/jdm-editor/vite.config.js
+
+# Create HTML
+RUN echo '<!DOCTYPE html>\n\
+<html lang="en">\n\
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>JDM Editor - Product Rules</title></head>\n\
+<body><div id="root"></div><script type="module" src="/src/main.jsx"></script></body>\n\
+</html>' > /opt/jdm-editor/index.html
+
+# Create React app with file browser
+RUN mkdir -p /opt/jdm-editor/src && echo 'import React, { useState, useEffect } from "react";\n\
+import ReactDOM from "react-dom/client";\n\
+import { DecisionGraph } from "@gorules/jdm-editor";\n\
+import "@gorules/jdm-editor/dist/style.css";\n\
+\n\
+const App = () => {\n\
+  const [files, setFiles] = useState([]);\n\
+  const [selected, setSelected] = useState(null);\n\
+  const [value, setValue] = useState(null);\n\
+  const [saving, setSaving] = useState(false);\n\
+\n\
+  useEffect(() => {\n\
+    fetch("/api/products").then(r => r.json()).then(setFiles);\n\
+  }, []);\n\
+\n\
+  const loadFile = async (name) => {\n\
+    const res = await fetch(`/api/products/${name}`);\n\
+    const data = await res.json();\n\
+    setValue(data);\n\
+    setSelected(name);\n\
+  };\n\
+\n\
+  const saveFile = async () => {\n\
+    if (!selected || !value) return;\n\
+    setSaving(true);\n\
+    await fetch(`/api/products/${selected}`, {\n\
+      method: "PUT",\n\
+      headers: { "Content-Type": "application/json" },\n\
+      body: JSON.stringify(value)\n\
+    });\n\
+    setSaving(false);\n\
+  };\n\
+\n\
+  return (\n\
+    <div style={{display:"flex",height:"100vh",fontFamily:"system-ui"}}>\n\
+      <div style={{width:250,background:"#1a1a2e",color:"#fff",padding:16,overflowY:"auto"}}>\n\
+        <h2 style={{margin:"0 0 16px",fontSize:18}}>Product Rules</h2>\n\
+        {files.map(f => (\n\
+          <div key={f.name} onClick={() => loadFile(f.name)}\n\
+            style={{padding:"12px",marginBottom:8,background:selected===f.name?"#4a4a6a":"#2a2a4a",\n\
+              borderRadius:6,cursor:"pointer"}}>\n\
+            <div style={{fontWeight:600}}>{f.label}</div>\n\
+            <div style={{fontSize:12,opacity:0.7}}>{f.name}</div>\n\
+          </div>\n\
+        ))}\n\
+      </div>\n\
+      <div style={{flex:1,display:"flex",flexDirection:"column"}}>\n\
+        {selected && (\n\
+          <div style={{padding:"8px 16px",background:"#f0f0f0",borderBottom:"1px solid #ddd",display:"flex",alignItems:"center",gap:16}}>\n\
+            <span style={{fontWeight:600}}>{selected}</span>\n\
+            <button onClick={saveFile} disabled={saving}\n\
+              style={{padding:"6px 16px",background:"#4CAF50",color:"#fff",border:"none",borderRadius:4,cursor:"pointer"}}>\n\
+              {saving ? "Saving..." : "Save"}\n\
+            </button>\n\
+          </div>\n\
+        )}\n\
+        <div style={{flex:1}}>\n\
+          {value ? <DecisionGraph value={value} onChange={setValue} /> : \n\
+            <div style={{display:"flex",alignItems:"center",justifyContent:"center",height:"100%",color:"#888"}}>\n\
+              Select a product from the sidebar\n\
+            </div>}\n\
+        </div>\n\
+      </div>\n\
+    </div>\n\
+  );\n\
+};\n\
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);' > /opt/jdm-editor/src/main.jsx
+
+# Create API server for products
+RUN echo 'const express = require("express");\n\
+const cors = require("cors");\n\
+const fs = require("fs");\n\
+const path = require("path");\n\
+\n\
+const app = express();\n\
+app.use(cors());\n\
+app.use(express.json({ limit: "10mb" }));\n\
+\n\
+const PRODUCTS_DIR = "/app/products";\n\
+\n\
+app.get("/api/products", (req, res) => {\n\
+  const files = fs.readdirSync(PRODUCTS_DIR).filter(f => f.endsWith(".json") && f !== "catalog.json");\n\
+  const products = files.map(f => {\n\
+    const content = JSON.parse(fs.readFileSync(path.join(PRODUCTS_DIR, f)));\n\
+    return { name: f, label: content.name || f };\n\
+  });\n\
+  res.json(products);\n\
+});\n\
+\n\
+app.get("/api/products/:name", (req, res) => {\n\
+  const filePath = path.join(PRODUCTS_DIR, req.params.name);\n\
+  if (!fs.existsSync(filePath)) return res.status(404).json({ error: "Not found" });\n\
+  res.json(JSON.parse(fs.readFileSync(filePath)));\n\
+});\n\
+\n\
+app.put("/api/products/:name", (req, res) => {\n\
+  const filePath = path.join(PRODUCTS_DIR, req.params.name);\n\
+  fs.writeFileSync(filePath, JSON.stringify(req.body, null, 2));\n\
+  res.json({ success: true });\n\
+});\n\
+\n\
+app.listen(3001, () => console.log("Products API on port 3001"));' > /opt/jdm-editor/server.js
+
+# Update package.json scripts
+RUN cd /opt/jdm-editor && npm pkg set scripts.dev="node server.js & vite" scripts.server="node server.js"
 
 # Create app user with sudo access
 RUN useradd -m -s /bin/bash appuser && \
@@ -124,7 +303,8 @@ RUN mkdir -p /var/lib/postgresql/16/main \
 
 # Initialize PostgreSQL as postgres user
 USER postgres
-RUN /usr/lib/postgresql/16/bin/initdb -D /var/lib/postgresql/16/main && \
+RUN rm -rf /var/lib/postgresql/16/main/* && \
+    /usr/lib/postgresql/16/bin/initdb -D /var/lib/postgresql/16/main && \
     echo "host all all 0.0.0.0/0 md5" >> /var/lib/postgresql/16/main/pg_hba.conf && \
     echo "local all all trust" >> /var/lib/postgresql/16/main/pg_hba.conf && \
     echo "listen_addresses='*'" >> /var/lib/postgresql/16/main/postgresql.conf && \
@@ -139,6 +319,9 @@ WORKDIR /app
 # Copy built artifacts from builder
 COPY --from=builder /app/target/release/insurance-api /usr/local/bin/insurance-api
 COPY --from=builder /app/migrations/ /app/migrations/
+
+# Copy product rules for JDM Editor
+COPY products/ /app/products/
 
 # Copy source code for development mode
 COPY --from=builder /app/Cargo.toml /app/Cargo.toml
@@ -170,8 +353,8 @@ ENV API_LOG_LEVEL=info
 ENV RUST_BACKTRACE=1
 ENV RUST_LOG=info
 
-# Expose ports
-EXPOSE 8080 5432
+# Expose ports (API, PostgreSQL, JDM Editor)
+EXPOSE 8080 5432 5173
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
@@ -179,7 +362,7 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
 
 # Labels
 LABEL org.opencontainers.image.title="Open Insurance Core Dev Server"
-LABEL org.opencontainers.image.description="All-in-one development environment with PostgreSQL and API server"
+LABEL org.opencontainers.image.description="All-in-one development environment with PostgreSQL, API server, and JDM Editor"
 LABEL org.opencontainers.image.version="0.1.0"
 
 ENTRYPOINT ["/docker-entrypoint.sh"]
