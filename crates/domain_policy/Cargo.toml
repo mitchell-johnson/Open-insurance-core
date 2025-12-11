@@ -1,0 +1,23 @@
+[package]
+name = "domain_policy"
+description = "Policy administration domain - underwriting, issuance, endorsements, and renewals"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+core_kernel = { workspace = true }
+rust_decimal = { workspace = true }
+rust_decimal_macros = { workspace = true }
+chrono = { workspace = true }
+uuid = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+
+# Rules engine for dynamic product configuration
+zen-engine = { workspace = true }
+
+[dev-dependencies]
+proptest = { workspace = true }

@@ -1,0 +1,19 @@
+[package]
+name = "domain_billing"
+description = "Billing domain - double-entry ledger, invoicing, and payment processing"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+core_kernel = { workspace = true }
+rust_decimal = { workspace = true }
+rust_decimal_macros = { workspace = true }
+chrono = { workspace = true }
+uuid = { workspace = true }
+serde = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+
+[dev-dependencies]
+proptest = { workspace = true }
