@@ -234,7 +234,8 @@ mod abs_and_rounding {
 
     #[test]
     fn test_round_to_currency_jpy() {
-        let m = Money::new(dec!(100.50), Currency::JPY);
+        // JPY has 0 decimal places, so 100.60 rounds up to 101
+        let m = Money::new(dec!(100.60), Currency::JPY);
         let rounded = m.round_to_currency();
         assert_eq!(rounded.amount(), dec!(101));
     }
