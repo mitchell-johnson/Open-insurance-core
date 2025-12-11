@@ -1,0 +1,186 @@
+# Open Insurance Core - All-in-One Development Dockerfile
+#
+# This Dockerfile creates a complete development environment containing:
+# - PostgreSQL 16 database
+# - Rust toolchain with cargo-watch for hot reload
+# - The API server with all dependencies
+#
+# Usage:
+#   Build:      docker build -f Dockerfile.dev -t insurance-dev .
+#   Run server: docker run -p 8080:8080 -p 5432:5432 insurance-dev serve
+#   Run dev:    docker run -p 8080:8080 -p 5432:5432 -v $(pwd):/app insurance-dev dev
+#   Run shell:  docker run -it -p 8080:8080 -p 5432:5432 insurance-dev shell
+#   Run tests:  docker run insurance-dev test
+#
+# Environment Variables:
+#   API_HOST              - Server bind address (default: 0.0.0.0)
+#   API_PORT              - Server port (default: 8080)
+#   API_JWT_SECRET        - JWT signing secret
+#   API_LOG_LEVEL         - Log level: trace, debug, info, warn, error
+#   POSTGRES_USER         - Database user (default: insurance_user)
+#   POSTGRES_PASSWORD     - Database password (default: insurance_pass)
+#   POSTGRES_DB           - Database name (default: insurance_dev)
+
+# ============================================
+# Stage 1: Build Stage
+# ============================================
+FROM rust:1.83-bookworm AS builder
+
+# Install build dependencies
+RUN apt-get update && apt-get install -y \
+    pkg-config \
+    libssl-dev \
+    libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Copy workspace manifests for dependency caching
+COPY Cargo.toml Cargo.lock ./
+
+# Create directory structure for dependency caching
+RUN mkdir -p crates/core_kernel/src \
+    crates/infra_db/src \
+    crates/domain_policy/src \
+    crates/domain_billing/src \
+    crates/domain_fund/src \
+    crates/domain_claims/src \
+    crates/domain_party/src \
+    crates/interface_api/src/bin \
+    crates/test_utils/src
+
+# Copy crate manifests
+COPY crates/core_kernel/Cargo.toml crates/core_kernel/
+COPY crates/infra_db/Cargo.toml crates/infra_db/
+COPY crates/domain_policy/Cargo.toml crates/domain_policy/
+COPY crates/domain_billing/Cargo.toml crates/domain_billing/
+COPY crates/domain_fund/Cargo.toml crates/domain_fund/
+COPY crates/domain_claims/Cargo.toml crates/domain_claims/
+COPY crates/domain_party/Cargo.toml crates/domain_party/
+COPY crates/interface_api/Cargo.toml crates/interface_api/
+COPY crates/test_utils/Cargo.toml crates/test_utils/
+
+# Create stub source files for dependency caching
+RUN for dir in crates/*/src; do \
+        echo "pub fn _stub() {}" > "$dir/lib.rs"; \
+    done && \
+    mkdir -p crates/interface_api/src/bin && \
+    echo "fn main() {}" > crates/interface_api/src/bin/server.rs
+
+# Build dependencies (this layer will be cached)
+RUN cargo build --release 2>/dev/null || true
+
+# Remove stubs
+RUN find crates -name "*.rs" -delete
+
+# Copy actual source code
+COPY crates/ crates/
+COPY migrations/ migrations/
+
+# Build the release binary
+RUN cargo build --release --bin insurance-api
+
+# ============================================
+# Stage 2: Development Runtime
+# ============================================
+FROM rust:1.83-bookworm AS dev-runtime
+
+# Install runtime dependencies, PostgreSQL, and development tools
+RUN apt-get update && apt-get install -y \
+    ca-certificates \
+    libssl3 \
+    libpq5 \
+    libpq-dev \
+    pkg-config \
+    postgresql-16 \
+    postgresql-contrib-16 \
+    postgresql-client-16 \
+    sudo \
+    curl \
+    procps \
+    bc \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install cargo-watch for hot reload development
+RUN cargo install cargo-watch
+
+# Create app user with sudo access
+RUN useradd -m -s /bin/bash appuser && \
+    echo "appuser ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
+
+# PostgreSQL configuration
+ENV POSTGRES_USER=insurance_user
+ENV POSTGRES_PASSWORD=insurance_pass
+ENV POSTGRES_DB=insurance_dev
+ENV PGDATA=/var/lib/postgresql/16/main
+
+# Set up PostgreSQL directories
+RUN mkdir -p /var/lib/postgresql/16/main \
+    /var/run/postgresql \
+    /var/log/postgresql && \
+    chown -R postgres:postgres /var/lib/postgresql /var/run/postgresql /var/log/postgresql && \
+    chmod 750 /var/lib/postgresql/16/main
+
+# Initialize PostgreSQL as postgres user
+USER postgres
+RUN /usr/lib/postgresql/16/bin/initdb -D /var/lib/postgresql/16/main && \
+    echo "host all all 0.0.0.0/0 md5" >> /var/lib/postgresql/16/main/pg_hba.conf && \
+    echo "local all all trust" >> /var/lib/postgresql/16/main/pg_hba.conf && \
+    echo "listen_addresses='*'" >> /var/lib/postgresql/16/main/postgresql.conf && \
+    echo "max_connections=100" >> /var/lib/postgresql/16/main/postgresql.conf && \
+    echo "shared_buffers=128MB" >> /var/lib/postgresql/16/main/postgresql.conf
+
+USER root
+
+# Application setup
+WORKDIR /app
+
+# Copy built artifacts from builder
+COPY --from=builder /app/target/release/insurance-api /usr/local/bin/insurance-api
+COPY --from=builder /app/migrations/ /app/migrations/
+
+# Copy source code for development mode
+COPY --from=builder /app/Cargo.toml /app/Cargo.toml
+COPY --from=builder /app/Cargo.lock /app/Cargo.lock
+COPY --from=builder /app/crates/ /app/crates/
+
+# Copy cached dependencies for faster rebuilds
+COPY --from=builder /app/target /app/target
+COPY --from=builder /usr/local/cargo/registry /usr/local/cargo/registry
+
+# Copy scripts
+COPY scripts/run-tests.sh /app/scripts/run-tests.sh
+COPY scripts/docker-entrypoint.sh /docker-entrypoint-base.sh
+
+# Create development entrypoint script
+COPY scripts/dev-entrypoint.sh /docker-entrypoint.sh
+RUN chmod +x /app/scripts/run-tests.sh /docker-entrypoint.sh /docker-entrypoint-base.sh
+
+# Create directories and set ownership
+RUN mkdir -p /app/test-results && chown -R appuser:appuser /app
+
+# Environment variables
+ENV DATABASE_URL=postgres://insurance_user:insurance_pass@localhost:5432/insurance_dev
+ENV API_HOST=0.0.0.0
+ENV API_PORT=8080
+ENV API_JWT_SECRET=dev-secret-change-in-production
+ENV API_JWT_EXPIRATION_SECS=3600
+ENV API_LOG_LEVEL=info
+ENV RUST_BACKTRACE=1
+ENV RUST_LOG=info
+
+# Expose ports
+EXPOSE 8080 5432
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+    CMD curl -f http://localhost:8080/health || exit 1
+
+# Labels
+LABEL org.opencontainers.image.title="Open Insurance Core Dev Server"
+LABEL org.opencontainers.image.description="All-in-one development environment with PostgreSQL and API server"
+LABEL org.opencontainers.image.version="0.1.0"
+
+ENTRYPOINT ["/docker-entrypoint.sh"]
+CMD ["serve"]
