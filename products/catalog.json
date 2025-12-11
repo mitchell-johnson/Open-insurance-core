@@ -1,0 +1,234 @@
+{
+  "$schema": "https://gorules.io/schemas/catalog/1.0.0",
+  "name": "Open Insurance Core Product Catalog",
+  "description": "Default product catalog with standard insurance products",
+  "version": "1.0.0",
+  "effective_date": "2024-01-01",
+  "products": [
+    {
+      "code": "TERM_LIFE_01",
+      "name": "Term Life Insurance",
+      "description": "Level term life insurance with fixed premiums for the duration of the term",
+      "category": "life",
+      "subcategory": "term",
+      "rules_file": "term_life.json",
+      "active": true,
+      "features": {
+        "renewable": true,
+        "convertible": true,
+        "level_premium": true,
+        "decreasing_benefit": false
+      },
+      "limits": {
+        "min_entry_age": 18,
+        "max_entry_age": 70,
+        "max_maturity_age": 85,
+        "min_term_years": 5,
+        "max_term_years": 30,
+        "min_sum_assured": 50000,
+        "max_sum_assured": 5000000
+      },
+      "available_riders": [
+        {
+          "code": "AD",
+          "name": "Accidental Death Benefit",
+          "description": "Additional benefit paid if death occurs due to accident",
+          "max_multiple": 2
+        },
+        {
+          "code": "WOP",
+          "name": "Waiver of Premium",
+          "description": "Premiums waived on disability",
+          "max_age": 60
+        },
+        {
+          "code": "CI_RIDER",
+          "name": "Critical Illness Rider",
+          "description": "Accelerated benefit on diagnosis of covered critical illness",
+          "max_percentage": 50
+        }
+      ],
+      "payment_modes": ["annual", "semi_annual", "quarterly", "monthly"],
+      "currencies": ["USD", "EUR", "GBP"]
+    },
+    {
+      "code": "WHOLE_LIFE_01",
+      "name": "Whole Life Insurance",
+      "description": "Permanent life insurance with cash value accumulation and dividends",
+      "category": "life",
+      "subcategory": "whole_life",
+      "rules_file": "whole_life.json",
+      "active": true,
+      "features": {
+        "cash_value": true,
+        "dividends": true,
+        "policy_loans": true,
+        "paid_up_additions": true,
+        "guaranteed_death_benefit": true
+      },
+      "limits": {
+        "min_entry_age": 18,
+        "max_entry_age": 65,
+        "min_sum_assured": 25000,
+        "max_sum_assured": 2000000
+      },
+      "available_riders": [
+        {
+          "code": "AD",
+          "name": "Accidental Death Benefit",
+          "description": "Additional benefit paid if death occurs due to accident",
+          "max_multiple": 2
+        },
+        {
+          "code": "WOP",
+          "name": "Waiver of Premium",
+          "description": "Premiums waived on disability",
+          "max_age": 60
+        },
+        {
+          "code": "PUA",
+          "name": "Paid-Up Additions",
+          "description": "Use dividends to purchase additional coverage"
+        }
+      ],
+      "payment_modes": ["annual", "semi_annual", "quarterly", "monthly"],
+      "payment_periods": ["lifetime", "10_pay", "20_pay", "paid_up_at_65"],
+      "currencies": ["USD", "EUR", "GBP"]
+    },
+    {
+      "code": "CRITICAL_ILLNESS_01",
+      "name": "Critical Illness Insurance",
+      "description": "Lump sum benefit on diagnosis of covered critical illness",
+      "category": "health",
+      "subcategory": "critical_illness",
+      "rules_file": "critical_illness.json",
+      "active": true,
+      "features": {
+        "lump_sum_benefit": true,
+        "multiple_conditions_covered": true,
+        "partial_payout_available": true,
+        "return_of_premium_option": true
+      },
+      "limits": {
+        "min_entry_age": 18,
+        "max_entry_age": 60,
+        "max_coverage_age": 70,
+        "min_sum_assured": 25000,
+        "max_sum_assured": 1000000,
+        "waiting_period_days": 90,
+        "survival_period_days": 30
+      },
+      "covered_conditions": [
+        "Cancer",
+        "Heart Attack (Myocardial Infarction)",
+        "Stroke",
+        "Coronary Artery Bypass Surgery",
+        "Kidney Failure",
+        "Major Organ Transplant",
+        "Multiple Sclerosis",
+        "Paralysis",
+        "Blindness",
+        "Deafness",
+        "Coma",
+        "Severe Burns",
+        "Alzheimer's Disease",
+        "Parkinson's Disease",
+        "Motor Neuron Disease",
+        "Benign Brain Tumor",
+        "Aorta Surgery",
+        "Heart Valve Replacement"
+      ],
+      "available_riders": [
+        {
+          "code": "ESC",
+          "name": "Early Stage Cancer",
+          "description": "Partial benefit for early stage cancer diagnosis",
+          "payout_percentage": 25
+        },
+        {
+          "code": "PP",
+          "name": "Partial Payout",
+          "description": "Partial benefit for less severe conditions",
+          "payout_percentage": 25
+        }
+      ],
+      "payment_modes": ["annual", "semi_annual", "quarterly", "monthly"],
+      "currencies": ["USD", "EUR", "GBP"]
+    },
+    {
+      "code": "ENDOWMENT_01",
+      "name": "Endowment Plan",
+      "description": "Savings-oriented life insurance with maturity benefit",
+      "category": "life",
+      "subcategory": "endowment",
+      "rules_file": "endowment.json",
+      "active": false,
+      "features": {
+        "maturity_benefit": true,
+        "death_benefit": true,
+        "guaranteed_returns": true,
+        "bonus_eligible": true
+      },
+      "limits": {
+        "min_entry_age": 18,
+        "max_entry_age": 55,
+        "min_term_years": 10,
+        "max_term_years": 30,
+        "min_sum_assured": 25000,
+        "max_sum_assured": 1000000
+      },
+      "payment_modes": ["annual", "semi_annual", "quarterly", "monthly"],
+      "currencies": ["USD", "EUR", "GBP"]
+    },
+    {
+      "code": "ULIP_01",
+      "name": "Unit Linked Insurance Plan",
+      "description": "Market-linked life insurance with investment options",
+      "category": "life",
+      "subcategory": "unit_linked",
+      "rules_file": "ulip.json",
+      "active": false,
+      "features": {
+        "market_linked": true,
+        "fund_switching": true,
+        "partial_withdrawal": true,
+        "top_up_premium": true,
+        "death_benefit": true
+      },
+      "limits": {
+        "min_entry_age": 18,
+        "max_entry_age": 60,
+        "min_term_years": 10,
+        "max_term_years": 40,
+        "min_premium": 10000,
+        "min_sum_assured": 100000
+      },
+      "available_funds": [
+        { "code": "EQ_GROWTH", "name": "Equity Growth Fund", "risk_level": "high" },
+        { "code": "BAL_FUND", "name": "Balanced Fund", "risk_level": "medium" },
+        { "code": "DEBT_FUND", "name": "Debt Fund", "risk_level": "low" },
+        { "code": "MM_FUND", "name": "Money Market Fund", "risk_level": "very_low" }
+      ],
+      "payment_modes": ["annual", "semi_annual", "quarterly", "monthly"],
+      "currencies": ["USD", "EUR", "GBP"]
+    }
+  ],
+  "underwriting_rules": {
+    "medical_exam_thresholds": {
+      "age_35_and_under": 500000,
+      "age_36_to_45": 300000,
+      "age_46_to_55": 200000,
+      "age_56_and_over": 100000
+    },
+    "financial_underwriting": {
+      "max_income_multiple": 20,
+      "max_net_worth_percentage": 50
+    },
+    "occupation_classes": {
+      "1": "Professional/office workers with no physical hazards",
+      "2": "Light manual work with minimal hazards",
+      "3": "Moderate manual work or some hazardous activities",
+      "4": "Heavy manual labor or high-risk occupations"
+    }
+  }
+}

@@ -44,6 +44,7 @@ pub mod underwriting;
 pub mod events;
 pub mod error;
 pub mod services;
+pub mod rules_engine;
 
 pub use aggregate::{Policy, PolicyState, PolicyBuilder};
 pub use coverage::{Coverage, CoverageType, Benefit};
@@ -52,3 +53,4 @@ pub use endorsement::{Endorsement, EndorsementType};
 pub use events::PolicyEvent;
 pub use error::PolicyError;
 pub use services::{UnderwritingService, RatingService};
+pub use rules_engine::{RulesEngine, ProductRules, EvaluationResult, ProductMetadata, RulesError};

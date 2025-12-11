@@ -1,0 +1,258 @@
+{
+  "$schema": "https://gorules.io/schemas/jdm/1.0.0",
+  "contentType": "application/vnd.gorules.decision",
+  "name": "Whole Life Insurance Product Rules",
+  "description": "Underwriting and rating rules for whole life insurance with cash value accumulation",
+  "nodes": [
+    {
+      "id": "input",
+      "name": "Request",
+      "type": "inputNode",
+      "position": { "x": 100, "y": 200 }
+    },
+    {
+      "id": "output",
+      "name": "Response",
+      "type": "outputNode",
+      "position": { "x": 1000, "y": 200 }
+    },
+    {
+      "id": "eligibility_check",
+      "name": "Eligibility Check",
+      "type": "decisionTableNode",
+      "position": { "x": 300, "y": 100 },
+      "content": {
+        "hitPolicy": "first",
+        "inputs": [
+          { "id": "age", "name": "Age", "field": "applicant.age" },
+          { "id": "sum_assured", "name": "Sum Assured", "field": "coverage.sum_assured" }
+        ],
+        "outputs": [
+          { "id": "eligible", "name": "Eligible", "field": "eligible" },
+          { "id": "reason", "name": "Reason", "field": "eligibility_reason" },
+          { "id": "medical_required", "name": "Medical Exam Required", "field": "medical_exam_required" }
+        ],
+        "rules": [
+          {
+            "inputs": [{ "id": "age", "value": "< 18" }, { "id": "sum_assured", "value": "-" }],
+            "outputs": [{ "id": "eligible", "value": "false" }, { "id": "reason", "value": "\"Minimum age is 18\"" }, { "id": "medical_required", "value": "false" }]
+          },
+          {
+            "inputs": [{ "id": "age", "value": "> 65" }, { "id": "sum_assured", "value": "-" }],
+            "outputs": [{ "id": "eligible", "value": "false" }, { "id": "reason", "value": "\"Maximum entry age is 65\"" }, { "id": "medical_required", "value": "false" }]
+          },
+          {
+            "inputs": [{ "id": "age", "value": "-" }, { "id": "sum_assured", "value": "> 2000000" }],
+            "outputs": [{ "id": "eligible", "value": "false" }, { "id": "reason", "value": "\"Maximum sum assured is 2,000,000\"" }, { "id": "medical_required", "value": "true" }]
+          },
+          {
+            "inputs": [{ "id": "age", "value": "-" }, { "id": "sum_assured", "value": "< 25000" }],
+            "outputs": [{ "id": "eligible", "value": "false" }, { "id": "reason", "value": "\"Minimum sum assured is 25,000\"" }, { "id": "medical_required", "value": "false" }]
+          },
+          {
+            "inputs": [{ "id": "age", "value": "[18..45)" }, { "id": "sum_assured", "value": "<= 500000" }],
+            "outputs": [{ "id": "eligible", "value": "true" }, { "id": "reason", "value": "\"Eligible - simplified issue\"" }, { "id": "medical_required", "value": "false" }]
+          },
+          {
+            "inputs": [{ "id": "age", "value": "[18..45)" }, { "id": "sum_assured", "value": "> 500000" }],
+            "outputs": [{ "id": "eligible", "value": "true" }, { "id": "reason", "value": "\"Eligible - full underwriting\"" }, { "id": "medical_required", "value": "true" }]
+          },
+          {
+            "inputs": [{ "id": "age", "value": "[45..55)" }, { "id": "sum_assured", "value": "<= 250000" }],
+            "outputs": [{ "id": "eligible", "value": "true" }, { "id": "reason", "value": "\"Eligible - simplified issue\"" }, { "id": "medical_required", "value": "false" }]
+          },
+          {
+            "inputs": [{ "id": "age", "value": "[45..55)" }, { "id": "sum_assured", "value": "> 250000" }],
+            "outputs": [{ "id": "eligible", "value": "true" }, { "id": "reason", "value": "\"Eligible - full underwriting\"" }, { "id": "medical_required", "value": "true" }]
+          },
+          {
+            "inputs": [{ "id": "age", "value": "[55..65]" }, { "id": "sum_assured", "value": "-" }],
+            "outputs": [{ "id": "eligible", "value": "true" }, { "id": "reason", "value": "\"Eligible - full underwriting required\"" }, { "id": "medical_required", "value": "true" }]
+          }
+        ]
+      }
+    },
+    {
+      "id": "smoker_loading",
+      "name": "Smoker Loading",
+      "type": "decisionTableNode",
+      "position": { "x": 300, "y": 250 },
+      "content": {
+        "hitPolicy": "first",
+        "inputs": [
+          { "id": "smoker", "name": "Is Smoker", "field": "medical.is_smoker" },
+          { "id": "former", "name": "Former Smoker", "field": "medical.is_former_smoker" }
+        ],
+        "outputs": [
+          { "id": "loading", "name": "Loading %", "field": "smoker_loading_percent" },
+          { "id": "class", "name": "Smoker Class", "field": "smoker_class" }
+        ],
+        "rules": [
+          {
+            "inputs": [{ "id": "smoker", "value": "true" }, { "id": "former", "value": "-" }],
+            "outputs": [{ "id": "loading", "value": "80" }, { "id": "class", "value": "\"smoker\"" }]
+          },
+          {
+            "inputs": [{ "id": "smoker", "value": "false" }, { "id": "former", "value": "true" }],
+            "outputs": [{ "id": "loading", "value": "40" }, { "id": "class", "value": "\"former_smoker\"" }]
+          },
+          {
+            "inputs": [{ "id": "smoker", "value": "false" }, { "id": "former", "value": "false" }],
+            "outputs": [{ "id": "loading", "value": "0" }, { "id": "class", "value": "\"non_smoker\"" }]
+          }
+        ]
+      }
+    },
+    {
+      "id": "age_band_rates",
+      "name": "Age Band Base Rates",
+      "type": "decisionTableNode",
+      "position": { "x": 500, "y": 100 },
+      "content": {
+        "hitPolicy": "first",
+        "inputs": [
+          { "id": "age", "name": "Age", "field": "applicant.age" },
+          { "id": "gender", "name": "Gender", "field": "applicant.gender" }
+        ],
+        "outputs": [
+          { "id": "rate", "name": "Base Rate per 1000", "field": "base_rate_per_thousand" }
+        ],
+        "rules": [
+          { "inputs": [{ "id": "age", "value": "[18..25)" }, { "id": "gender", "value": "\"male\"" }], "outputs": [{ "id": "rate", "value": "8.50" }] },
+          { "inputs": [{ "id": "age", "value": "[18..25)" }, { "id": "gender", "value": "\"female\"" }], "outputs": [{ "id": "rate", "value": "7.25" }] },
+          { "inputs": [{ "id": "age", "value": "[25..30)" }, { "id": "gender", "value": "\"male\"" }], "outputs": [{ "id": "rate", "value": "9.75" }] },
+          { "inputs": [{ "id": "age", "value": "[25..30)" }, { "id": "gender", "value": "\"female\"" }], "outputs": [{ "id": "rate", "value": "8.25" }] },
+          { "inputs": [{ "id": "age", "value": "[30..35)" }, { "id": "gender", "value": "\"male\"" }], "outputs": [{ "id": "rate", "value": "11.50" }] },
+          { "inputs": [{ "id": "age", "value": "[30..35)" }, { "id": "gender", "value": "\"female\"" }], "outputs": [{ "id": "rate", "value": "9.75" }] },
+          { "inputs": [{ "id": "age", "value": "[35..40)" }, { "id": "gender", "value": "\"male\"" }], "outputs": [{ "id": "rate", "value": "14.25" }] },
+          { "inputs": [{ "id": "age", "value": "[35..40)" }, { "id": "gender", "value": "\"female\"" }], "outputs": [{ "id": "rate", "value": "12.00" }] },
+          { "inputs": [{ "id": "age", "value": "[40..45)" }, { "id": "gender", "value": "\"male\"" }], "outputs": [{ "id": "rate", "value": "18.50" }] },
+          { "inputs": [{ "id": "age", "value": "[40..45)" }, { "id": "gender", "value": "\"female\"" }], "outputs": [{ "id": "rate", "value": "15.50" }] },
+          { "inputs": [{ "id": "age", "value": "[45..50)" }, { "id": "gender", "value": "\"male\"" }], "outputs": [{ "id": "rate", "value": "24.75" }] },
+          { "inputs": [{ "id": "age", "value": "[45..50)" }, { "id": "gender", "value": "\"female\"" }], "outputs": [{ "id": "rate", "value": "20.50" }] },
+          { "inputs": [{ "id": "age", "value": "[50..55)" }, { "id": "gender", "value": "\"male\"" }], "outputs": [{ "id": "rate", "value": "34.25" }] },
+          { "inputs": [{ "id": "age", "value": "[50..55)" }, { "id": "gender", "value": "\"female\"" }], "outputs": [{ "id": "rate", "value": "28.00" }] },
+          { "inputs": [{ "id": "age", "value": "[55..60)" }, { "id": "gender", "value": "\"male\"" }], "outputs": [{ "id": "rate", "value": "48.50" }] },
+          { "inputs": [{ "id": "age", "value": "[55..60)" }, { "id": "gender", "value": "\"female\"" }], "outputs": [{ "id": "rate", "value": "39.25" }] },
+          { "inputs": [{ "id": "age", "value": "[60..65]" }, { "id": "gender", "value": "\"male\"" }], "outputs": [{ "id": "rate", "value": "72.00" }] },
+          { "inputs": [{ "id": "age", "value": "[60..65]" }, { "id": "gender", "value": "\"female\"" }], "outputs": [{ "id": "rate", "value": "58.00" }] },
+          { "inputs": [{ "id": "age", "value": "-" }, { "id": "gender", "value": "-" }], "outputs": [{ "id": "rate", "value": "25.00" }] }
+        ]
+      }
+    },
+    {
+      "id": "cash_value_factors",
+      "name": "Cash Value Accumulation",
+      "type": "decisionTableNode",
+      "position": { "x": 500, "y": 300 },
+      "content": {
+        "hitPolicy": "first",
+        "inputs": [
+          { "id": "age", "name": "Age", "field": "applicant.age" },
+          { "id": "payment_mode", "name": "Payment Mode", "field": "payment.mode" }
+        ],
+        "outputs": [
+          { "id": "cv_rate", "name": "Cash Value Rate %", "field": "cash_value_rate" },
+          { "id": "dividend_rate", "name": "Dividend Rate %", "field": "dividend_rate" }
+        ],
+        "rules": [
+          { "inputs": [{ "id": "age", "value": "[18..30)" }, { "id": "payment_mode", "value": "\"annual\"" }], "outputs": [{ "id": "cv_rate", "value": "4.5" }, { "id": "dividend_rate", "value": "2.5" }] },
+          { "inputs": [{ "id": "age", "value": "[18..30)" }, { "id": "payment_mode", "value": "-" }], "outputs": [{ "id": "cv_rate", "value": "4.0" }, { "id": "dividend_rate", "value": "2.0" }] },
+          { "inputs": [{ "id": "age", "value": "[30..45)" }, { "id": "payment_mode", "value": "\"annual\"" }], "outputs": [{ "id": "cv_rate", "value": "4.0" }, { "id": "dividend_rate", "value": "2.25" }] },
+          { "inputs": [{ "id": "age", "value": "[30..45)" }, { "id": "payment_mode", "value": "-" }], "outputs": [{ "id": "cv_rate", "value": "3.5" }, { "id": "dividend_rate", "value": "1.75" }] },
+          { "inputs": [{ "id": "age", "value": "[45..65]" }, { "id": "payment_mode", "value": "\"annual\"" }], "outputs": [{ "id": "cv_rate", "value": "3.5" }, { "id": "dividend_rate", "value": "2.0" }] },
+          { "inputs": [{ "id": "age", "value": "[45..65]" }, { "id": "payment_mode", "value": "-" }], "outputs": [{ "id": "cv_rate", "value": "3.0" }, { "id": "dividend_rate", "value": "1.5" }] }
+        ]
+      }
+    },
+    {
+      "id": "calculate_premium",
+      "name": "Calculate Premium",
+      "type": "expressionNode",
+      "position": { "x": 750, "y": 200 },
+      "content": {
+        "expressions": [
+          {
+            "key": "total_loading_percent",
+            "value": "smoker_loading_percent + bmi_loading_percent"
+          },
+          {
+            "key": "loading_multiplier",
+            "value": "1 + (total_loading_percent / 100)"
+          },
+          {
+            "key": "annual_premium",
+            "value": "(coverage.sum_assured / 1000) * base_rate_per_thousand * loading_multiplier"
+          },
+          {
+            "key": "monthly_premium",
+            "value": "annual_premium / 12"
+          },
+          {
+            "key": "year_10_cash_value",
+            "value": "annual_premium * 10 * (cash_value_rate / 100)"
+          },
+          {
+            "key": "year_20_cash_value",
+            "value": "annual_premium * 20 * (cash_value_rate / 100) * 1.5"
+          }
+        ]
+      }
+    },
+    {
+      "id": "bmi_loading",
+      "name": "BMI Loading",
+      "type": "decisionTableNode",
+      "position": { "x": 300, "y": 400 },
+      "content": {
+        "hitPolicy": "first",
+        "inputs": [
+          { "id": "bmi", "name": "BMI", "field": "medical.bmi" }
+        ],
+        "outputs": [
+          { "id": "loading", "name": "Loading %", "field": "bmi_loading_percent" }
+        ],
+        "rules": [
+          { "inputs": [{ "id": "bmi", "value": "< 17" }], "outputs": [{ "id": "loading", "value": "50" }] },
+          { "inputs": [{ "id": "bmi", "value": "[17..18.5)" }], "outputs": [{ "id": "loading", "value": "20" }] },
+          { "inputs": [{ "id": "bmi", "value": "[18.5..25)" }], "outputs": [{ "id": "loading", "value": "0" }] },
+          { "inputs": [{ "id": "bmi", "value": "[25..30)" }], "outputs": [{ "id": "loading", "value": "10" }] },
+          { "inputs": [{ "id": "bmi", "value": "[30..35)" }], "outputs": [{ "id": "loading", "value": "30" }] },
+          { "inputs": [{ "id": "bmi", "value": ">= 35" }], "outputs": [{ "id": "loading", "value": "60" }] }
+        ]
+      }
+    }
+  ],
+  "edges": [
+    { "id": "e1", "sourceId": "input", "targetId": "eligibility_check" },
+    { "id": "e2", "sourceId": "input", "targetId": "smoker_loading" },
+    { "id": "e3", "sourceId": "input", "targetId": "bmi_loading" },
+    { "id": "e4", "sourceId": "input", "targetId": "age_band_rates" },
+    { "id": "e5", "sourceId": "input", "targetId": "cash_value_factors" },
+    { "id": "e6", "sourceId": "eligibility_check", "targetId": "calculate_premium" },
+    { "id": "e7", "sourceId": "smoker_loading", "targetId": "calculate_premium" },
+    { "id": "e8", "sourceId": "bmi_loading", "targetId": "calculate_premium" },
+    { "id": "e9", "sourceId": "age_band_rates", "targetId": "calculate_premium" },
+    { "id": "e10", "sourceId": "cash_value_factors", "targetId": "calculate_premium" },
+    { "id": "e11", "sourceId": "calculate_premium", "targetId": "output" }
+  ],
+  "metadata": {
+    "product_code": "WHOLE_LIFE_01",
+    "product_name": "Whole Life Insurance",
+    "version": "1.0.0",
+    "effective_date": "2024-01-01",
+    "currency": "USD",
+    "min_entry_age": 18,
+    "max_entry_age": 65,
+    "min_sum_assured": 25000,
+    "max_sum_assured": 2000000,
+    "coverages": ["death_benefit", "maturity_benefit", "cash_value"],
+    "optional_riders": ["accidental_death", "waiver_of_premium", "paid_up_additions"],
+    "features": {
+      "participating": true,
+      "cash_value": true,
+      "policy_loans": true,
+      "dividends": true
+    }
+  }
+}

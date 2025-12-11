@@ -150,6 +150,74 @@ services:
       - insurance-network
     command: ["all"]
 
+  # ===========================================
+  # All-in-One Development Server
+  # ===========================================
+  # Usage:
+  #   Start server:    docker-compose up dev
+  #   Hot reload:      docker-compose run --rm -v $(pwd):/app dev dev
+  #   Run shell:       docker-compose run --rm dev shell
+  #   Run tests:       docker-compose run --rm dev test
+  dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: insurance-dev
+    environment:
+      API_HOST: 0.0.0.0
+      API_PORT: 8080
+      API_JWT_SECRET: dev-secret-change-in-production
+      API_LOG_LEVEL: debug
+      RUST_BACKTRACE: 1
+      RUST_LOG: debug
+      POSTGRES_USER: insurance_user
+      POSTGRES_PASSWORD: insurance_pass
+      POSTGRES_DB: insurance_dev
+    ports:
+      - "8080:8080"
+      - "5432:5432"
+    volumes:
+      - dev_cargo_cache:/usr/local/cargo/registry
+      - dev_target_cache:/app/target
+    networks:
+      - insurance-network
+    command: ["serve"]
+    stdin_open: true
+    tty: true
+
+  # ===========================================
+  # Development with Hot Reload
+  # ===========================================
+  # Mounts source code for live reloading
+  # Usage: docker-compose up dev-watch
+  dev-watch:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: insurance-dev-watch
+    environment:
+      API_HOST: 0.0.0.0
+      API_PORT: 8080
+      API_JWT_SECRET: dev-secret-change-in-production
+      API_LOG_LEVEL: debug
+      RUST_BACKTRACE: 1
+      RUST_LOG: debug
+      POSTGRES_USER: insurance_user
+      POSTGRES_PASSWORD: insurance_pass
+      POSTGRES_DB: insurance_dev
+    ports:
+      - "8080:8080"
+      - "5432:5432"
+    volumes:
+      - .:/app:delegated
+      - dev_cargo_cache:/usr/local/cargo/registry
+      - dev_target_cache:/app/target
+    networks:
+      - insurance-network
+    command: ["dev"]
+    stdin_open: true
+    tty: true
+
 networks:
   insurance-network:
     driver: bridge
@@ -159,3 +227,5 @@ volumes:
   test_results:
   cargo_cache:
   coverage_data:
+  dev_cargo_cache:
+  dev_target_cache:

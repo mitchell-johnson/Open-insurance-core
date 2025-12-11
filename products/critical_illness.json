@@ -1,0 +1,279 @@
+{
+  "$schema": "https://gorules.io/schemas/jdm/1.0.0",
+  "contentType": "application/vnd.gorules.decision",
+  "name": "Critical Illness Insurance Product Rules",
+  "description": "Underwriting and rating rules for critical illness stand-alone coverage",
+  "nodes": [
+    {
+      "id": "input",
+      "name": "Request",
+      "type": "inputNode",
+      "position": { "x": 100, "y": 200 }
+    },
+    {
+      "id": "output",
+      "name": "Response",
+      "type": "outputNode",
+      "position": { "x": 1000, "y": 200 }
+    },
+    {
+      "id": "eligibility_check",
+      "name": "Eligibility Check",
+      "type": "decisionTableNode",
+      "position": { "x": 300, "y": 100 },
+      "content": {
+        "hitPolicy": "first",
+        "inputs": [
+          { "id": "age", "name": "Age", "field": "applicant.age" },
+          { "id": "sum_assured", "name": "Sum Assured", "field": "coverage.sum_assured" },
+          { "id": "has_ci_history", "name": "Has CI History", "field": "medical.has_critical_illness_history" }
+        ],
+        "outputs": [
+          { "id": "eligible", "name": "Eligible", "field": "eligible" },
+          { "id": "reason", "name": "Reason", "field": "eligibility_reason" },
+          { "id": "underwriting_type", "name": "Underwriting Type", "field": "underwriting_type" }
+        ],
+        "rules": [
+          {
+            "inputs": [{ "id": "age", "value": "< 18" }, { "id": "sum_assured", "value": "-" }, { "id": "has_ci_history", "value": "-" }],
+            "outputs": [{ "id": "eligible", "value": "false" }, { "id": "reason", "value": "\"Minimum age is 18\"" }, { "id": "underwriting_type", "value": "\"declined\"" }]
+          },
+          {
+            "inputs": [{ "id": "age", "value": "> 60" }, { "id": "sum_assured", "value": "-" }, { "id": "has_ci_history", "value": "-" }],
+            "outputs": [{ "id": "eligible", "value": "false" }, { "id": "reason", "value": "\"Maximum entry age is 60\"" }, { "id": "underwriting_type", "value": "\"declined\"" }]
+          },
+          {
+            "inputs": [{ "id": "age", "value": "-" }, { "id": "sum_assured", "value": "-" }, { "id": "has_ci_history", "value": "true" }],
+            "outputs": [{ "id": "eligible", "value": "false" }, { "id": "reason", "value": "\"Prior critical illness history\"" }, { "id": "underwriting_type", "value": "\"declined\"" }]
+          },
+          {
+            "inputs": [{ "id": "age", "value": "-" }, { "id": "sum_assured", "value": "> 1000000" }, { "id": "has_ci_history", "value": "-" }],
+            "outputs": [{ "id": "eligible", "value": "false" }, { "id": "reason", "value": "\"Maximum sum assured is 1,000,000\"" }, { "id": "underwriting_type", "value": "\"declined\"" }]
+          },
+          {
+            "inputs": [{ "id": "age", "value": "-" }, { "id": "sum_assured", "value": "< 25000" }, { "id": "has_ci_history", "value": "-" }],
+            "outputs": [{ "id": "eligible", "value": "false" }, { "id": "reason", "value": "\"Minimum sum assured is 25,000\"" }, { "id": "underwriting_type", "value": "\"declined\"" }]
+          },
+          {
+            "inputs": [{ "id": "age", "value": "[18..40)" }, { "id": "sum_assured", "value": "<= 250000" }, { "id": "has_ci_history", "value": "false" }],
+            "outputs": [{ "id": "eligible", "value": "true" }, { "id": "reason", "value": "\"Eligible - simplified issue\"" }, { "id": "underwriting_type", "value": "\"simplified\"" }]
+          },
+          {
+            "inputs": [{ "id": "age", "value": "[18..40)" }, { "id": "sum_assured", "value": "> 250000" }, { "id": "has_ci_history", "value": "false" }],
+            "outputs": [{ "id": "eligible", "value": "true" }, { "id": "reason", "value": "\"Eligible - full underwriting\"" }, { "id": "underwriting_type", "value": "\"full\"" }]
+          },
+          {
+            "inputs": [{ "id": "age", "value": "[40..60]" }, { "id": "sum_assured", "value": "-" }, { "id": "has_ci_history", "value": "false" }],
+            "outputs": [{ "id": "eligible", "value": "true" }, { "id": "reason", "value": "\"Eligible - full underwriting required\"" }, { "id": "underwriting_type", "value": "\"full\"" }]
+          }
+        ]
+      }
+    },
+    {
+      "id": "family_history",
+      "name": "Family History Loading",
+      "type": "decisionTableNode",
+      "position": { "x": 300, "y": 250 },
+      "content": {
+        "hitPolicy": "first",
+        "inputs": [
+          { "id": "cancer_history", "name": "Family Cancer < 60", "field": "medical.family_cancer_before_60" },
+          { "id": "heart_history", "name": "Family Heart Disease < 60", "field": "medical.family_heart_disease_before_60" },
+          { "id": "stroke_history", "name": "Family Stroke < 60", "field": "medical.family_stroke_before_60" }
+        ],
+        "outputs": [
+          { "id": "loading", "name": "Loading %", "field": "family_history_loading_percent" },
+          { "id": "action", "name": "Action", "field": "family_history_action" }
+        ],
+        "rules": [
+          {
+            "inputs": [{ "id": "cancer_history", "value": ">= 2" }, { "id": "heart_history", "value": "-" }, { "id": "stroke_history", "value": "-" }],
+            "outputs": [{ "id": "loading", "value": "100" }, { "id": "action", "value": "\"refer\"" }]
+          },
+          {
+            "inputs": [{ "id": "cancer_history", "value": "-" }, { "id": "heart_history", "value": ">= 2" }, { "id": "stroke_history", "value": "-" }],
+            "outputs": [{ "id": "loading", "value": "75" }, { "id": "action", "value": "\"refer\"" }]
+          },
+          {
+            "inputs": [{ "id": "cancer_history", "value": "1" }, { "id": "heart_history", "value": "-" }, { "id": "stroke_history", "value": "-" }],
+            "outputs": [{ "id": "loading", "value": "50" }, { "id": "action", "value": "\"accept\"" }]
+          },
+          {
+            "inputs": [{ "id": "cancer_history", "value": "-" }, { "id": "heart_history", "value": "1" }, { "id": "stroke_history", "value": "-" }],
+            "outputs": [{ "id": "loading", "value": "35" }, { "id": "action", "value": "\"accept\"" }]
+          },
+          {
+            "inputs": [{ "id": "cancer_history", "value": "-" }, { "id": "heart_history", "value": "-" }, { "id": "stroke_history", "value": "1" }],
+            "outputs": [{ "id": "loading", "value": "25" }, { "id": "action", "value": "\"accept\"" }]
+          },
+          {
+            "inputs": [{ "id": "cancer_history", "value": "0" }, { "id": "heart_history", "value": "0" }, { "id": "stroke_history", "value": "0" }],
+            "outputs": [{ "id": "loading", "value": "0" }, { "id": "action", "value": "\"accept\"" }]
+          }
+        ]
+      }
+    },
+    {
+      "id": "smoker_loading",
+      "name": "Smoker Loading",
+      "type": "decisionTableNode",
+      "position": { "x": 300, "y": 400 },
+      "content": {
+        "hitPolicy": "first",
+        "inputs": [
+          { "id": "smoker", "name": "Is Smoker", "field": "medical.is_smoker" }
+        ],
+        "outputs": [
+          { "id": "loading", "name": "Loading %", "field": "smoker_loading_percent" }
+        ],
+        "rules": [
+          { "inputs": [{ "id": "smoker", "value": "true" }], "outputs": [{ "id": "loading", "value": "75" }] },
+          { "inputs": [{ "id": "smoker", "value": "false" }], "outputs": [{ "id": "loading", "value": "0" }] }
+        ]
+      }
+    },
+    {
+      "id": "age_band_rates",
+      "name": "Age Band Base Rates",
+      "type": "decisionTableNode",
+      "position": { "x": 550, "y": 100 },
+      "content": {
+        "hitPolicy": "first",
+        "inputs": [
+          { "id": "age", "name": "Age", "field": "applicant.age" },
+          { "id": "gender", "name": "Gender", "field": "applicant.gender" }
+        ],
+        "outputs": [
+          { "id": "rate", "name": "Base Rate per 1000", "field": "base_rate_per_thousand" }
+        ],
+        "rules": [
+          { "inputs": [{ "id": "age", "value": "[18..25)" }, { "id": "gender", "value": "\"male\"" }], "outputs": [{ "id": "rate", "value": "0.85" }] },
+          { "inputs": [{ "id": "age", "value": "[18..25)" }, { "id": "gender", "value": "\"female\"" }], "outputs": [{ "id": "rate", "value": "0.95" }] },
+          { "inputs": [{ "id": "age", "value": "[25..30)" }, { "id": "gender", "value": "\"male\"" }], "outputs": [{ "id": "rate", "value": "1.15" }] },
+          { "inputs": [{ "id": "age", "value": "[25..30)" }, { "id": "gender", "value": "\"female\"" }], "outputs": [{ "id": "rate", "value": "1.35" }] },
+          { "inputs": [{ "id": "age", "value": "[30..35)" }, { "id": "gender", "value": "\"male\"" }], "outputs": [{ "id": "rate", "value": "1.65" }] },
+          { "inputs": [{ "id": "age", "value": "[30..35)" }, { "id": "gender", "value": "\"female\"" }], "outputs": [{ "id": "rate", "value": "1.95" }] },
+          { "inputs": [{ "id": "age", "value": "[35..40)" }, { "id": "gender", "value": "\"male\"" }], "outputs": [{ "id": "rate", "value": "2.45" }] },
+          { "inputs": [{ "id": "age", "value": "[35..40)" }, { "id": "gender", "value": "\"female\"" }], "outputs": [{ "id": "rate", "value": "2.85" }] },
+          { "inputs": [{ "id": "age", "value": "[40..45)" }, { "id": "gender", "value": "\"male\"" }], "outputs": [{ "id": "rate", "value": "3.75" }] },
+          { "inputs": [{ "id": "age", "value": "[40..45)" }, { "id": "gender", "value": "\"female\"" }], "outputs": [{ "id": "rate", "value": "4.25" }] },
+          { "inputs": [{ "id": "age", "value": "[45..50)" }, { "id": "gender", "value": "\"male\"" }], "outputs": [{ "id": "rate", "value": "5.85" }] },
+          { "inputs": [{ "id": "age", "value": "[45..50)" }, { "id": "gender", "value": "\"female\"" }], "outputs": [{ "id": "rate", "value": "6.25" }] },
+          { "inputs": [{ "id": "age", "value": "[50..55)" }, { "id": "gender", "value": "\"male\"" }], "outputs": [{ "id": "rate", "value": "9.25" }] },
+          { "inputs": [{ "id": "age", "value": "[50..55)" }, { "id": "gender", "value": "\"female\"" }], "outputs": [{ "id": "rate", "value": "9.15" }] },
+          { "inputs": [{ "id": "age", "value": "[55..60]" }, { "id": "gender", "value": "\"male\"" }], "outputs": [{ "id": "rate", "value": "14.75" }] },
+          { "inputs": [{ "id": "age", "value": "[55..60]" }, { "id": "gender", "value": "\"female\"" }], "outputs": [{ "id": "rate", "value": "13.50" }] },
+          { "inputs": [{ "id": "age", "value": "-" }, { "id": "gender", "value": "-" }], "outputs": [{ "id": "rate", "value": "5.00" }] }
+        ]
+      }
+    },
+    {
+      "id": "covered_conditions",
+      "name": "Covered Conditions Definition",
+      "type": "expressionNode",
+      "position": { "x": 550, "y": 300 },
+      "content": {
+        "expressions": [
+          {
+            "key": "covered_conditions",
+            "value": "[\"cancer\", \"heart_attack\", \"stroke\", \"coronary_artery_bypass\", \"kidney_failure\", \"major_organ_transplant\", \"multiple_sclerosis\", \"paralysis\", \"blindness\", \"deafness\", \"coma\", \"severe_burns\", \"alzheimers\", \"parkinsons\", \"motor_neuron_disease\", \"benign_brain_tumor\", \"aorta_surgery\", \"heart_valve_replacement\"]"
+          },
+          {
+            "key": "num_conditions_covered",
+            "value": "18"
+          },
+          {
+            "key": "waiting_period_days",
+            "value": "90"
+          },
+          {
+            "key": "survival_period_days",
+            "value": "30"
+          }
+        ]
+      }
+    },
+    {
+      "id": "calculate_premium",
+      "name": "Calculate Premium",
+      "type": "expressionNode",
+      "position": { "x": 800, "y": 200 },
+      "content": {
+        "expressions": [
+          {
+            "key": "total_loading_percent",
+            "value": "smoker_loading_percent + family_history_loading_percent + bmi_loading_percent"
+          },
+          {
+            "key": "loading_multiplier",
+            "value": "1 + (total_loading_percent / 100)"
+          },
+          {
+            "key": "annual_premium",
+            "value": "(coverage.sum_assured / 1000) * base_rate_per_thousand * loading_multiplier"
+          },
+          {
+            "key": "monthly_premium",
+            "value": "annual_premium / 12"
+          }
+        ]
+      }
+    },
+    {
+      "id": "bmi_loading",
+      "name": "BMI Loading",
+      "type": "decisionTableNode",
+      "position": { "x": 550, "y": 450 },
+      "content": {
+        "hitPolicy": "first",
+        "inputs": [
+          { "id": "bmi", "name": "BMI", "field": "medical.bmi" }
+        ],
+        "outputs": [
+          { "id": "loading", "name": "Loading %", "field": "bmi_loading_percent" },
+          { "id": "action", "name": "Action", "field": "bmi_action" }
+        ],
+        "rules": [
+          { "inputs": [{ "id": "bmi", "value": "< 16" }], "outputs": [{ "id": "loading", "value": "0" }, { "id": "action", "value": "\"decline\"" }] },
+          { "inputs": [{ "id": "bmi", "value": "[16..18.5)" }], "outputs": [{ "id": "loading", "value": "35" }, { "id": "action", "value": "\"accept\"" }] },
+          { "inputs": [{ "id": "bmi", "value": "[18.5..25)" }], "outputs": [{ "id": "loading", "value": "0" }, { "id": "action", "value": "\"accept\"" }] },
+          { "inputs": [{ "id": "bmi", "value": "[25..30)" }], "outputs": [{ "id": "loading", "value": "20" }, { "id": "action", "value": "\"accept\"" }] },
+          { "inputs": [{ "id": "bmi", "value": "[30..35)" }], "outputs": [{ "id": "loading", "value": "50" }, { "id": "action", "value": "\"accept\"" }] },
+          { "inputs": [{ "id": "bmi", "value": "[35..40)" }], "outputs": [{ "id": "loading", "value": "100" }, { "id": "action", "value": "\"refer\"" }] },
+          { "inputs": [{ "id": "bmi", "value": ">= 40" }], "outputs": [{ "id": "loading", "value": "0" }, { "id": "action", "value": "\"decline\"" }] }
+        ]
+      }
+    }
+  ],
+  "edges": [
+    { "id": "e1", "sourceId": "input", "targetId": "eligibility_check" },
+    { "id": "e2", "sourceId": "input", "targetId": "family_history" },
+    { "id": "e3", "sourceId": "input", "targetId": "smoker_loading" },
+    { "id": "e4", "sourceId": "input", "targetId": "age_band_rates" },
+    { "id": "e5", "sourceId": "input", "targetId": "bmi_loading" },
+    { "id": "e6", "sourceId": "input", "targetId": "covered_conditions" },
+    { "id": "e7", "sourceId": "eligibility_check", "targetId": "calculate_premium" },
+    { "id": "e8", "sourceId": "family_history", "targetId": "calculate_premium" },
+    { "id": "e9", "sourceId": "smoker_loading", "targetId": "calculate_premium" },
+    { "id": "e10", "sourceId": "age_band_rates", "targetId": "calculate_premium" },
+    { "id": "e11", "sourceId": "bmi_loading", "targetId": "calculate_premium" },
+    { "id": "e12", "sourceId": "covered_conditions", "targetId": "calculate_premium" },
+    { "id": "e13", "sourceId": "calculate_premium", "targetId": "output" }
+  ],
+  "metadata": {
+    "product_code": "CRITICAL_ILLNESS_01",
+    "product_name": "Critical Illness Insurance",
+    "version": "1.0.0",
+    "effective_date": "2024-01-01",
+    "currency": "USD",
+    "min_entry_age": 18,
+    "max_entry_age": 60,
+    "min_sum_assured": 25000,
+    "max_sum_assured": 1000000,
+    "coverages": ["critical_illness_benefit"],
+    "optional_riders": ["early_stage_cancer", "partial_payout"],
+    "waiting_period_days": 90,
+    "survival_period_days": 30,
+    "conditions_covered": 18
+  }
+}

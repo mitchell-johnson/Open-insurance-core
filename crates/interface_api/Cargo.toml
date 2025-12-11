@@ -5,6 +5,10 @@ version.workspace = true
 edition.workspace = true
 license.workspace = true
 
+[[bin]]
+name = "insurance-api"
+path = "src/bin/server.rs"
+
 [dependencies]
 # Internal crates
 core_kernel = { workspace = true }
