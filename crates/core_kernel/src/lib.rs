@@ -14,6 +14,9 @@ pub use money::{Money, Currency, MoneyError};
 pub use temporal::{ValidPeriod, SystemPeriod, BiTemporalRecord, Timezone};
 pub use identifiers::{
     PolicyId, ClaimId, PartyId, AccountId, JournalEntryId,
-    FundId, UnitHoldingId, VersionId,
+    FundId, UnitHoldingId, VersionId, AgentId, AddressId,
+    PolicyVersionId, CoverageId, EndorsementId, ClaimLineId,
+    ReserveId, PaymentId, ContactId, PostingId, InvoiceId,
+    NavId, TransactionId, AuditEventId, RiskObjectId,
 };
 pub use error::CoreError;
