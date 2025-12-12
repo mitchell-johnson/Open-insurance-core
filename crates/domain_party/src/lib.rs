@@ -68,6 +68,8 @@ pub mod kyc;
 pub mod agent;
 pub mod error;
 pub mod validation;
+pub mod ports;
+pub mod adapters;
 
 pub use party::{
     Party, PartyType, PartyComposition, Individual, Corporate, Gender,
@@ -82,3 +84,10 @@ pub use kyc::{KycStatus, KycDocument};
 pub use agent::Agent;
 pub use error::PartyError;
 pub use validation::{PartyValidator, ValidationResult};
+pub use ports::{
+    PartyPort, PartyPortExt, PartyQuery,
+    CreatePartyRequest, CreateMemberRequest, UpdatePartyRequest,
+};
+#[cfg(any(test, feature = "mock"))]
+pub use ports::mock::MockPartyPort;
+pub use adapters::{ExternalCrmAdapter, ExternalCrmConfig};

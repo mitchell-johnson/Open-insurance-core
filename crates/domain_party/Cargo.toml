@@ -10,11 +10,19 @@ core_kernel = { workspace = true }
 chrono = { workspace = true }
 uuid = { workspace = true }
 serde = { workspace = true }
+serde_json = { workspace = true }
 thiserror = { workspace = true }
 validator = { workspace = true }
 fluent = { workspace = true }
 unic-langid = { workspace = true }
 rust_decimal = { workspace = true }
+rust_decimal_macros = { workspace = true }
+async-trait = { workspace = true }
+tokio = { workspace = true }
+
+[features]
+default = []
+mock = []
 
 [dev-dependencies]
 proptest = { workspace = true }

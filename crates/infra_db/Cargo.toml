@@ -7,6 +7,7 @@ license.workspace = true
 
 [dependencies]
 core_kernel = { workspace = true }
+domain_party = { workspace = true }
 sqlx = { workspace = true }
 tokio = { workspace = true }
 chrono = { workspace = true }

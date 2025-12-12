@@ -29,7 +29,9 @@ pub mod pool;
 pub mod error;
 pub mod bitemporal;
 pub mod repositories;
+pub mod adapters;
 
 pub use pool::{DatabasePool, create_pool, DatabaseConfig};
 pub use error::DatabaseError;
 pub use bitemporal::{BiTemporalRepository, BiTemporalQuery};
+pub use adapters::PostgresPartyAdapter;

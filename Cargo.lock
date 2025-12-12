@@ -489,6 +489,7 @@ checksum = "773648b94d0e5d620f64f280777445740e61fe701025087ec8b57f45c791888b"
 name = "core_kernel"
 version = "0.1.0"
 dependencies = [
+ "async-trait",
  "chrono",
  "chrono-tz",
  "proptest",
@@ -747,6 +748,7 @@ dependencies = [
 name = "domain_party"
 version = "0.1.0"
 dependencies = [
+ "async-trait",
  "chrono",
  "core_kernel",
  "fluent",
@@ -756,6 +758,7 @@ dependencies = [
  "serde",
  "serde_json",
  "thiserror 2.0.17",
+ "tokio",
  "unic-langid",
  "uuid",
  "validator",
@@ -1555,6 +1558,7 @@ dependencies = [
  "async-trait",
  "chrono",
  "core_kernel",
+ "domain_party",
  "proptest",
  "rust_decimal",
  "serde",
@@ -1584,6 +1588,7 @@ dependencies = [
  "infra_db",
  "jsonwebtoken",
  "proptest",
+ "rust_decimal",
  "serde",
  "serde_json",
  "sqlx",
